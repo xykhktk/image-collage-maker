@@ -1,7 +1,7 @@
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 import clsx from "clsx";
-
+import { Analytics } from '@vercel/analytics/react';
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
@@ -40,6 +40,7 @@ export default function RootLayout({
         )}
       >
         <App>{children}</App>
+        <Analytics />
       </body>
     </html>
   );
