@@ -6,7 +6,6 @@ const defaultState: CanvasStateType = {
   canvas: null,
   ratio: 0,
   template: 0,
-  tab: "template",
   imageWidth: 1024,
   imageHeight: 1024,
   imageBorderWidth : 0,

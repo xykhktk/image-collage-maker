@@ -52,10 +52,4 @@ function useCanvasImageData() {
   }
 }
 
-function useTabData() {
-  const activeTab = useAppSelector((state: RootStateType) => state.canvas.tab)
-
-  return { activeTab }
-}
-
-export { useCanvasData, useCanvasConfigData, useCanvasImageData, useTabData, useImageSizeData }
+export { useCanvasData, useCanvasConfigData, useCanvasImageData, useImageSizeData }

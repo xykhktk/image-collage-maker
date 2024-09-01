@@ -1,5 +1,5 @@
 "use client";
-import { OBJECT_LOCKED, ASPECT_RATIOS } from "@/src/constants/canvasConfig"
+import { ASPECT_RATIOS } from "@/src/constants/canvasConfig"
 import { useCanvasAction } from "@/src/hooks/useReduxAction"
 import { useCanvasConfigData } from "@/src/hooks/useReduxData"
 import { CustomImageObject } from "@/src/types"
@@ -63,7 +63,7 @@ export default function Canvas() {
       activeTemplate.config.forEach((config) => {
         const PROPERTIES = config.rectFabric(imageHeight, imageWidth, imageBorderWidth)
 
-        const cell = new fabric.Rect(PROPERTIES).set(OBJECT_LOCKED)
+        const cell = new fabric.Rect(PROPERTIES)
 
         // 3. Define image upload event handler
         const handleImageUpload = (selectedCell: fabric.Rect) => {
