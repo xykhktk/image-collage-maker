@@ -3,6 +3,8 @@ import { useCanvasData} from "@/src/hooks/useReduxData"
 import {Slider} from "@nextui-org/react";
 import { useAppSelector } from "@/src/redux/hooks"
 import type { RootStateType } from "@/src/redux/store"
+import { useAppDispatch } from "@/src/redux/hooks"
+import {  clearAllImages } from "@/src/redux/selectedImageSlice"
 
 
 export default function SetCanvanSize() {
@@ -10,6 +12,7 @@ export default function SetCanvanSize() {
   const { changeImageWidth } = useChangeImageWidthAction()
   const { changeImageHeight } = useChangeImageHeidhtAction()
   const { canvas } = useCanvasData()
+  const dispatch = useAppDispatch()
 
   let imageWidth = useAppSelector((state: RootStateType) => state.canvas.imageWidth)
   let imageHeight = useAppSelector((state: RootStateType) => state.canvas.imageHeight)
@@ -17,7 +20,7 @@ export default function SetCanvanSize() {
 
   const handleChange = (newWidth: number, newHeight: number ) => {
     // changeImageSize(newWidth, newHeight);
-
+    dispatch(clearAllImages());
   };
 
   return (

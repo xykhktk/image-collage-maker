@@ -3,18 +3,22 @@ import { useCanvasData} from "@/src/hooks/useReduxData"
 import {Slider} from "@nextui-org/react";
 import { useAppSelector } from "@/src/redux/hooks"
 import type { RootStateType } from "@/src/redux/store"
+import {  clearAllImages } from "@/src/redux/selectedImageSlice"
+import { useAppDispatch } from "@/src/redux/hooks"
+
 
 
 export default function PopTemplate() {
   // const { imageSizeData } = useImageSizeData()
   const { changeImageBorderWidth } = useChangeImageBorderWidthAction()
   const { canvas } = useCanvasData()
+  const dispatch = useAppDispatch()
 
   let imageBorderWidth = useAppSelector((state: RootStateType) => state.canvas.imageBorderWidth)
 
   const handleChange = (newWidth: number ) => {
     // changeImageSize(newWidth, newHeight);
-
+    dispatch(clearAllImages());
   };
 
   return (
