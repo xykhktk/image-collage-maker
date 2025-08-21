@@ -1,8 +1,12 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "create image collage inline",
-  description: "create image collage inline",
+  name: "Image Collage Maker - Free Online Photo Collage Tool",
+  description: "Create beautiful photo collages online with our free image collage maker. Multiple templates, easy editing, and high-quality export. No download required, start creating now!",
+  keywords: "image collage,photo collage maker,online collage tool,photo editing,collage templates,free collage tool,image editing,photo montage",
+  author: "Image Collage Maker",
+  url: "https://your-domain.com", // Please replace with your actual domain
+  ogImage: "/og-image.jpg", // Need to add Open Graph image
   navMenu: [
     {
       label: "Home",
@@ -48,10 +52,18 @@ export const siteConfig = {
     },
   ],
   links: {
-    github: "https://github.com/nextui-org/nextui",
-    twitter: "https://twitter.com/getnextui",
-    docs: "https://nextui.org",
-    discord: "https://discord.gg/9b6yyZKmH4",
-    sponsor: "https://patreon.com/jrgarciadev",
+    // github: "https://github.com/your-username/image-collage-maker", // Please replace with your GitHub link
+    // twitter: "https://twitter.com/your-handle", // Please replace with your Twitter link
+    // docs: "https://your-docs.com", // Please replace with your docs link
+    // discord: "https://discord.gg/your-server", // Please replace with your Discord link
+    // sponsor: "https://patreon.com/your-page", // Please replace with your sponsor link
   },
+  features: [
+    "Multiple Templates",
+    "Online Editing",
+    "One-Click Export",
+    "Free to Use",
+    "High Quality Output",
+    "Responsive Design"
+  ]
 };
