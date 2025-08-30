@@ -5,12 +5,12 @@ import { Toolbar } from "@/src/components/toolbar";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Free Online Image Collage Maker - Multiple Templates, One-Click Export",
-  description: "Create stunning photo collages with our free online image collage maker. Multiple templates, real-time preview, and high-quality export. No download required, start creating now!",
-  keywords: "free image collage,online collage tool,photo collage maker,collage templates,image editing tool",
+  title: "Free Online Image Collage Maker - Local Processing, Privacy Protected, Multiple Templates",
+  description: "Create stunning photo collages with our free online image collage maker. All image selection and editing are done entirely in your local browser, never uploaded to any server, ensuring your privacy. Multiple templates, real-time preview. No download software required, , start creating now!",
+  keywords: "free image collage,online collage tool,photo collage maker,collage templates,image editing tool,local image processing,privacy protection,no server upload",
   openGraph: {
-    title: "Free Online Image Collage Maker - Multiple Templates, One-Click Export",
-    description: "Create stunning photo collages with our free online image collage maker. Multiple templates, real-time preview, and high-quality export.",
+    title: "Free Online Image Collage Maker - Local Processing, Privacy Protected, Multiple Templates",
+    description: "Create stunning photo collages with our free online image collage maker. All image selection and editing are done entirely in your local browser, never uploaded to any server, ensuring your privacy. Multiple templates, real-time preview.",
     type: "website",
     url: siteConfig.url,
   },

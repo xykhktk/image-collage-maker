@@ -12,11 +12,11 @@ interface SEOHeadProps {
 }
 
 export default function SEOHead({
-  title = "Image Collage Maker - Free Online Photo Collage Tool",
-  description = "Create beautiful photo collages online with our free image collage maker. Multiple templates, easy editing, and high-quality export. No download required, start creating now!",
-  keywords = "image collage,photo collage maker,online collage tool,photo editing,collage templates,free collage tool,image editing,photo montage",
+  title = "Image Collage Maker - Free Online Photo Collage Tool - Local Processing, Privacy Protected",
+  description = "Create beautiful photo collages online with our free image collage maker. All image processing is done locally in your browser, never uploaded to any server, protecting your privacy. Multiple templates, easy editing, and high-quality export. No download software required, start creating now!",
+  keywords = "image collage,photo collage maker,online collage tool,photo editing,collage templates,free collage tool,image editing,photo montage,local processing,privacy protection,no server upload",
   image = "/og-image.jpg",
-  url = "https://your-domain.com",
+  url = "https://www.imagecollage.org",
   type = "website"
 }: SEOHeadProps) {
   return (
@@ -34,8 +34,8 @@ export default function SEOHead({
       <meta property="og:image" content={image} />
       <meta property="og:url" content={url} />
       <meta property="og:type" content={type} />
-      <meta property="og:site_name" content="图片拼贴制作器" />
-      <meta property="og:locale" content="zh_CN" />
+      <meta property="og:site_name" content="Image Collage Maker" />
+      <meta property="og:locale" content="en_US" />
       
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
