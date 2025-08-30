@@ -134,21 +134,45 @@ export default function Canvas() {
           uploadIconDataUrl,
           {},
           {
-            left: cell.left + cell.width / 2,
-            top: cell.top + cell.height / 2,
+            selectable: false,
+            evented: false,
+          }
+        ).then((img: fabric.Image) => {
+          // Scale the icon to fit within the cell if needed
+          img.scaleToWidth(cell.width * 0.05);
+          if (img.height > cell.height) {
+            img.scaleToHeight(cell.height * 0.05);
+          }
+          // 将图片的原点设置为中心，这样left/top就是中心坐标
+          img.set({ originX: 'center', originY: 'center', left: 0, top: 0 });
+
+          // Create the text label
+          const uploadText = new fabric.Text("Drop / Click\nto Choose Image", {
+            fontSize: 16, // 调整字体大小
+            fill: "#cccccc",
+            textAlign: "center",
+            originX: "center",
+            originY: "center",
+            left: 0, // 相对于 group 的中心
+            top: img.getScaledHeight() / 2 + 20, // 文字在图标下方，+10是间距
+            selectable: false,
+            evented: false,
+          });
+
+          // Create a group for the icon and text
+          const uploadGroup = new fabric.Group([img, uploadText], {
+            left: cell.left! + cell.width! / 2, // group 相对于画布居中于 cell
+            top: cell.top! + cell.height! / 2,
             originX: "center",
             originY: "center",
             selectable: false,
             evented: false,
-            id: `upload_icon_${activeTemplateIndex}_${index}`,
-          }
-        ).then((img: fabric.Image) => {
-          // Scale the icon to fit within the cell if needed
-          img.scaleToWidth(cell.width * 0.05); // Adjust scale as needed
-          if (img.height > cell.height) {
-            img.scaleToHeight(cell.height * 0.05);
-          }
-          canvas.add(img);
+            // id: `upload_icon_${activeTemplateIndex}_${index}`,
+          });
+          (uploadGroup as FabricObjectWithId).set({ id: `upload_icon_${activeTemplateIndex}_${index}` });
+
+          canvas.add(cell);
+          canvas.add(uploadGroup); 
           canvas.renderAll();
         }).catch((error) => {
           console.error("Failed to load upload icon:", error);
@@ -178,8 +202,8 @@ export default function Canvas() {
           handleImageUploadOnClick(cell, index)
         })
 
-        // 5. Render cell
-        canvas.add(cell)
+        // 5. Render cell (moved canvas.add(cell) inside the .then() block for better control)
+        // canvas.add(cell) // 这一行现在会在上面的 then() 块中执行
       })
 
       // 6. Render all looped objects (initial render, icons will be added later)
