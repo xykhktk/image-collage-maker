@@ -10,7 +10,7 @@ import { useAppSelector } from "@/src/redux/hooks"
 import type { RootStateType } from "@/src/redux/store"
 import { UploadIcon } from "./icons"
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FabricObjectWithId } from "@/src/types/canvas"; 
+import { FabricObjectWithId } from "@/src/types/canvas";
 
 export default function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -44,7 +44,7 @@ export default function Canvas() {
         panelWidth,
         wrapperRef.current.clientHeight - 16,
       )
-      
+
       // 1. Setup canvas
       const canvas = new fabric.Canvas(canvasRef.current, {
         backgroundColor: "#F8F8FF",
@@ -61,6 +61,61 @@ export default function Canvas() {
 
       // 1.1 Clone canvas
       setCanvasAction(canvas)
+
+      // Helper function to add image to a specific cell
+      const addImageToCell = async (file: File, selectedCell: fabric.Rect, cellIndex: number) => {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async (e) => {
+          const dataUrl = e.target?.result as string;
+          const img = await fabric.Image.fromURL(dataUrl);
+          const imgId = `img_${new Date().getTime()}`;
+
+          // Remove the upload icon when an image is uploaded
+          const existingUploadIcon = canvas.getObjects().find((obj: FabricObjectWithId) => obj.id === `upload_icon_${activeTemplateIndex}_${cellIndex}`);
+          if (existingUploadIcon) {
+            canvas.remove(existingUploadIcon);
+          }
+
+          img.set({
+            id: imgId,
+            left: selectedCell.left,
+            top: selectedCell.top,
+            selectable: true,
+            hasControls: true,
+            clipPath: selectedCell,
+            perPixelTargetFind: true,
+          }) as CustomImageObject;
+
+          const config = activeTemplate.config[cellIndex]; // 获取对应cell的配置
+          if (config.scaleTo === "width") {
+            img.scaleToWidth(selectedCell.width + 1);
+          } else if (config.scaleTo === "height") {
+            img.scaleToHeight(selectedCell.height + 1);
+          }
+
+          addImageAction({
+            id: imgId,
+            filters: {
+              brightness: 0,
+              contrast: 0,
+              noise: 0,
+              saturation: 0,
+              vibrance: 0,
+              blur: 0,
+            },
+          });
+
+          canvas.add(img);
+          canvas.setActiveObject(img);
+          canvas.renderAll();
+          toast.success("Image successfully added.", {
+            id: "toast-uploaded",
+          });
+        };
+      };
 
       // 2. Setup objects & its properties
       activeTemplate.config.forEach((config, index) => {
@@ -87,7 +142,7 @@ export default function Canvas() {
             evented: false,
             id: `upload_icon_${activeTemplateIndex}_${index}`,
           }
-        ).then((img: fabric.Image) => { 
+        ).then((img: fabric.Image) => {
           // Scale the icon to fit within the cell if needed
           img.scaleToWidth(cell.width * 0.05); // Adjust scale as needed
           if (img.height > cell.height) {
@@ -100,8 +155,8 @@ export default function Canvas() {
         });
 
 
-        // 3. Define image upload event handler
-        const handleImageUpload = (selectedCell: fabric.Rect) => {
+        // 3. Define image upload event handler (for click)
+        const handleImageUploadOnClick = (selectedCell: fabric.Rect, cellIndex: number) => {
           const input = inputRef.current
           if (input) {
             input.onchange = async (event) => {
@@ -109,85 +164,103 @@ export default function Canvas() {
               const file = target.files && target.files[0]
               if (!file) return
 
-              // Load uploaded file as Base64
-              const reader = new FileReader()
-              reader.readAsDataURL(file)
-              reader.onload = (e) => {
-                const dataUrl = e.target?.result as string
-                // Load image as fabric image
-                const addImage = async (imageBase64: string) => {
-                  const img = await fabric.Image.fromURL(imageBase64)
-                  const imgId = `img_${new Date().getTime()}`
+              await addImageToCell(file, selectedCell, cellIndex);
 
-                  // Remove the upload icon when an image is uploaded
-                  const existingUploadIcon = canvas.getObjects().find(obj => (obj as FabricObjectWithId).id === `upload_icon_${activeTemplateIndex}_${index}`);
-                  if (existingUploadIcon) {
-                    canvas.remove(existingUploadIcon);
-                  }
-
-                  // Set position to selected cell
-                  img.set({
-                    id: imgId,
-                    left: selectedCell.left,
-                    top: selectedCell.top,
-                    selectable: true,
-                    hasControls: true,
-                    clipPath: selectedCell,
-                    perPixelTargetFind: true,
-                  }) as CustomImageObject
-
-                  // Scale accordingly to look good
-                  if (config.scaleTo === "width") {
-                    img.scaleToWidth(selectedCell.width + 1)
-                  } else if (config.scaleTo === "height") {
-                    img.scaleToHeight(selectedCell.height + 1)
-                  }
-
-                  // Save image in redux
-                  addImageAction({
-                    id: imgId,
-                    filters: {
-                      brightness: 0,
-                      contrast: 0,
-                      noise: 0,
-                      saturation: 0,
-                      vibrance: 0,
-                      blur: 0,
-                    },
-                  })
-
-                  canvas.add(img)
-                  canvas.setActiveObject(img)
-                }
-                addImage(dataUrl)
-              }
-
-              // Render in canvas
-              // canvas.remove(selectedCell)
-              canvas.renderAll()
-              toast.success("Image successfully added.", {
-                id: "toast-uploaded",
-              })
-
+              input.value = ""; // Clear input after use
             }
 
             input.click()
-            input.value = ""
           }
         }
 
-        // 4. Attach event handler
+        // 4. Attach event handler (for click)
         cell.on("mouseup", () => {
-          handleImageUpload(cell)
+          handleImageUploadOnClick(cell, index)
         })
 
-        // 5. Render
+        // 5. Render cell
         canvas.add(cell)
-        // Note: The upload icon is now added asynchronously within fabric.Image.fromURL callback.
       })
 
       // 6. Render all looped objects (initial render, icons will be added later)
       canvas.renderAll()
+
+      // Drag and Drop Event Handlers
+      const handleDragOver = (e: DragEvent) => {
+        e.preventDefault(); // Prevent default to allow drop
+        e.stopPropagation();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      };
+
+      const handleDrop = async (e: DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0];
+          if (!file.type.startsWith('image/')) {
+            toast.error("Only image files are allowed.", {
+              id: "toast-invalid-file",
+            });
+            return;
+          }
+
+          // Determine which cell the file was dropped on
+          const pointer = canvas.getPointer(e);
+          const targetObject = canvas.findTarget(e as unknown as MouseEvent);
+
+          let targetCell: fabric.Rect | undefined;
+          let targetCellIndex: number | undefined;
+
+          // If a specific object was targeted, check if it's a cell
+          if (targetObject && targetObject.type === 'rect') {
+            targetCell = targetObject as fabric.Rect;
+            // Find the index of the targeted cell
+            targetCellIndex = activeTemplate.config.findIndex(
+              (config, i) =>
+                targetCell?.left === config.rectFabric(imageHeight, imageWidth, imageBorderWidth).left &&
+                targetCell?.top === config.rectFabric(imageHeight, imageWidth, imageBorderWidth).top
+            );
+          }
+
+          // If no specific cell was targeted, or if the target was not a cell, find the first available cell
+          if (!targetCell || targetCellIndex === undefined || targetCellIndex === -1) {
+            for (let i = 0; i < activeTemplate.config.length; i++) {
+              const currentCellConfig = activeTemplate.config[i];
+              const rectProps = currentCellConfig.rectFabric(imageHeight, imageWidth, imageBorderWidth);
+              const cellRect = new fabric.Rect(rectProps); // Create a temporary rect for hit testing
+
+              // Check if the drop point is within this cell
+              if (pointer && pointer.x >= cellRect.left! && pointer.x <= (cellRect.left! + cellRect.width!) &&
+                  pointer.y >= cellRect.top! && pointer.y <= (cellRect.top! + cellRect.height!)) {
+                  targetCell = canvas.getObjects().find(obj =>
+                      obj.left === rectProps.left &&
+                      obj.top === rectProps.top &&
+                      obj.type === 'rect'
+                  ) as fabric.Rect | undefined;
+                  targetCellIndex = i;
+                  break;
+              }
+            }
+          }
+
+          // If a cell is identified, add the image
+          if (targetCell && targetCellIndex !== undefined) {
+            await addImageToCell(file, targetCell, targetCellIndex);
+          } else {
+            toast.error("Could not place image. Please click a cell or try again.", {
+              id: "toast-drop-failed",
+            });
+          }
+        }
+      };
+
+      // Attach Drag and Drop handlers
+      const currentWrapper = wrapperRef.current;
+      currentWrapper.addEventListener("dragover", handleDragOver);
+      currentWrapper.addEventListener("drop", handleDrop);
 
       // 7. Attach event handler on object selection
       const handleImageSelect = (selected: CustomImageObject) => {
@@ -231,11 +304,13 @@ export default function Canvas() {
       }
 
       // Attach handler
-      wrapperRef.current.addEventListener("click", unselectObject)
+      currentWrapper.addEventListener("click", unselectObject)
 
       // 8. Clean up the canvas when the component unmounts
       return () => {
-        wrapperRef.current?.removeEventListener("click", unselectObject)
+        currentWrapper.removeEventListener("dragover", handleDragOver);
+        currentWrapper.removeEventListener("drop", handleDrop);
+        currentWrapper.removeEventListener("click", unselectObject)
         canvas.dispose()
       }
     }
