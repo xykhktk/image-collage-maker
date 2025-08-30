@@ -8,6 +8,9 @@ import { useEffect, useRef } from "react"
 import toast from "react-hot-toast"
 import { useAppSelector } from "@/src/redux/hooks"
 import type { RootStateType } from "@/src/redux/store"
+import { UploadIcon } from "./icons"
+import { renderToStaticMarkup } from 'react-dom/server';
+import { FabricObjectWithId } from "@/src/types/canvas"; 
 
 export default function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -60,10 +63,42 @@ export default function Canvas() {
       setCanvasAction(canvas)
 
       // 2. Setup objects & its properties
-      activeTemplate.config.forEach((config) => {
+      activeTemplate.config.forEach((config, index) => {
         const PROPERTIES = config.rectFabric(imageHeight, imageWidth, imageBorderWidth)
 
         const cell = new fabric.Rect(PROPERTIES)
+
+        // Generate SVG data URL for the UploadIcon
+        const uploadIconSvg = encodeURIComponent(
+          renderToStaticMarkup(<UploadIcon size={50} color="#cccccc" />)
+        );
+        const uploadIconDataUrl = `data:image/svg+xml;utf8,${uploadIconSvg}`;
+
+        // Create a fabric.Image from the SVG data URL
+        fabric.Image.fromURL(
+          uploadIconDataUrl,
+          {},
+          {
+            left: cell.left + cell.width / 2,
+            top: cell.top + cell.height / 2,
+            originX: "center",
+            originY: "center",
+            selectable: false,
+            evented: false,
+            id: `upload_icon_${activeTemplateIndex}_${index}`,
+          }
+        ).then((img: fabric.Image) => { 
+          // Scale the icon to fit within the cell if needed
+          img.scaleToWidth(cell.width * 0.05); // Adjust scale as needed
+          if (img.height > cell.height) {
+            img.scaleToHeight(cell.height * 0.05);
+          }
+          canvas.add(img);
+          canvas.renderAll();
+        }).catch((error) => {
+          console.error("Failed to load upload icon:", error);
+        });
+
 
         // 3. Define image upload event handler
         const handleImageUpload = (selectedCell: fabric.Rect) => {
@@ -83,6 +118,12 @@ export default function Canvas() {
                 const addImage = async (imageBase64: string) => {
                   const img = await fabric.Image.fromURL(imageBase64)
                   const imgId = `img_${new Date().getTime()}`
+
+                  // Remove the upload icon when an image is uploaded
+                  const existingUploadIcon = canvas.getObjects().find(obj => (obj as FabricObjectWithId).id === `upload_icon_${activeTemplateIndex}_${index}`);
+                  if (existingUploadIcon) {
+                    canvas.remove(existingUploadIcon);
+                  }
 
                   // Set position to selected cell
                   img.set({
@@ -142,9 +183,10 @@ export default function Canvas() {
 
         // 5. Render
         canvas.add(cell)
+        // Note: The upload icon is now added asynchronously within fabric.Image.fromURL callback.
       })
 
-      // 6. Render all looped objects
+      // 6. Render all looped objects (initial render, icons will be added later)
       canvas.renderAll()
 
       // 7. Attach event handler on object selection

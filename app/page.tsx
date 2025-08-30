@@ -26,14 +26,14 @@ export default function Home() {
             Free Online Image Collage Maker
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-6">
-            Professional photo collage tool with multiple templates to create personalized works easily
+            Photo collage tool with multiple templates to create personalized works easily
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500 dark:text-gray-400">
             <span>✓ Free to Use</span>
             <span>✓ Multiple Templates</span>
             <span>✓ Online Editing</span>
-            <span>✓ One-Click Export</span>
-            <span>✓ High Quality Output</span>
+            {/*<span>✓ One-Click Export</span>*/}
+            {/*<span>✓ High Quality Output</span>*/}
           </div>
         </div>
 

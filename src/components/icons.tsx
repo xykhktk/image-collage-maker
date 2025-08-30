@@ -538,4 +538,18 @@ export const SearchIcon = (props: IconSvgProps) => (
   </svg>
 );
 
-
+export const UploadIcon = ({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg"
+    height={size || height}
+    width={size || width}
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+  </svg>
+);

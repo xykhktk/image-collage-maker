@@ -1,5 +1,13 @@
-import type { Canvas } from "fabric"
+import { Canvas, FabricObject } from "fabric" 
 import { IconSvgProps } from "@/types";
+
+declare module 'fabric' {
+  namespace fabric {
+    interface FabricObject {
+      id?: string;
+    }
+  }
+}
 
 export type RectFabricFunctionType = (
   CANVAS_HEIGHT: number,
@@ -46,4 +54,8 @@ export interface CanvasStateType {
   imageWidth : number
   imageHeight : number
   imageBorderWidth : number
+}
+
+export interface FabricObjectWithId extends FabricObject {
+  id?: string;
 }
