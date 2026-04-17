@@ -57,6 +57,7 @@ export default function Canvas() {
         controlsAboveOverlay: false,
         allowTouchScrolling: true,
         imageSmoothingEnabled: true,
+        imageSmoothingQuality: "high",
       })
 
       // 1.1 Clone canvas
@@ -87,6 +88,7 @@ export default function Canvas() {
             hasControls: true,
             clipPath: selectedCell,
             perPixelTargetFind: true,
+            imageSmoothing: true,
           }) as CustomImageObject;
 
           const config = activeTemplate.config[cellIndex]; // 获取对应cell的配置
@@ -172,7 +174,7 @@ export default function Canvas() {
           (uploadGroup as FabricObjectWithId).set({ id: `upload_icon_${activeTemplateIndex}_${index}` });
 
           canvas.add(cell);
-          canvas.add(uploadGroup); 
+          canvas.add(uploadGroup);
           canvas.renderAll();
         }).catch((error) => {
           console.error("Failed to load upload icon:", error);
@@ -258,14 +260,14 @@ export default function Canvas() {
 
               // Check if the drop point is within this cell
               if (pointer && pointer.x >= cellRect.left! && pointer.x <= (cellRect.left! + cellRect.width!) &&
-                  pointer.y >= cellRect.top! && pointer.y <= (cellRect.top! + cellRect.height!)) {
-                  targetCell = canvas.getObjects().find(obj =>
-                      obj.left === rectProps.left &&
-                      obj.top === rectProps.top &&
-                      obj.type === 'rect'
-                  ) as fabric.Rect | undefined;
-                  targetCellIndex = i;
-                  break;
+                pointer.y >= cellRect.top! && pointer.y <= (cellRect.top! + cellRect.height!)) {
+                targetCell = canvas.getObjects().find(obj =>
+                  obj.left === rectProps.left &&
+                  obj.top === rectProps.top &&
+                  obj.type === 'rect'
+                ) as fabric.Rect | undefined;
+                targetCellIndex = i;
+                break;
               }
             }
           }
