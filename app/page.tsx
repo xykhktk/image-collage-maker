@@ -22,8 +22,11 @@ export default function Home() {
       <section className="flex flex-col items-center justify-center p-8 md:p-10">
         {/* SEO-friendly title and description */}
         <div className="text-center mb-8 max-w-4xl mx-auto">
-          {/* PC 端 (md+) 控制为一行：48px 字号 + tracking-tight 可稳定收进 896px 容器 */}
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight md:whitespace-nowrap mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          {/* PC 端 (md+) 控制为一行：48px 字号 + tracking-tight 可稳定收进 896px 容器。
+              行高必须放宽到 1.375 让渐变背景盖住字形降部（g/y 尾巴），否则 bg-clip-text
+              会把超出元素盒的降部裁掉。注意：lg:text-5xl 在样式表中位于基础类之后，
+              其自带的 line-height: 1 会覆盖基础 leading-snug，所以 lg 档必须重复声明 */}
+          <h1 className="text-4xl lg:text-5xl leading-snug lg:leading-snug font-bold tracking-tight md:whitespace-nowrap mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Free Online Image Collage Maker
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-6">

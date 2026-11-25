@@ -14,7 +14,8 @@ function App({children} : {children: React.ReactNode}) {
             <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
             <div className="relative flex flex-col h-screen">
                 <Navbar />
-                <main className="container mx-auto max-w-7xl max-h-7xl pt-16 px-6 flex-grow">
+                {/* sticky 导航占文档流，无需 pt-16 让位；留着会造成标题上方大片空白 */}
+                <main className="container mx-auto max-w-7xl max-h-7xl px-6 flex-grow">
                 {children}
                 </main>
                 <footer className="w-full flex items-center justify-center py-3">
