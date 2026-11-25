@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // 纯静态站点：next build 产物在 out/，拼图功能全部在浏览器端完成（fabric.js），
+  // 不需要 Worker 脚本，也不需要 D1 / KV / R2 / 队列等绑定
+  "name": "image-collage-maker",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./out",
+    // 未命中路径返回 out/404.html（由 app/not-found.tsx 生成）
+    "not_found_handling": "404-page"
+  }
+}
