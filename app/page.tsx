@@ -22,7 +22,8 @@ export default function Home() {
       <section className="flex flex-col items-center justify-center p-8 md:p-10">
         {/* SEO-friendly title and description */}
         <div className="text-center mb-8 max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          {/* PC 端 (md+) 控制为一行：48px 字号 + tracking-tight 可稳定收进 896px 容器 */}
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight md:whitespace-nowrap mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Free Online Image Collage Maker
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-6">
