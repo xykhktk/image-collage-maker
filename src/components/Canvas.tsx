@@ -211,13 +211,15 @@ export default function Canvas() {
           });
           (uploadGroup as FabricObjectWithId).set({ id: `upload_icon_${activeTemplateIndex}_${index}` });
 
-          // 显示比例很小（uiScale 很大）时，把提示组收缩回格子内，避免溢出
+          // 显示比例很小（uiScale 很大）时，把提示组收缩回格子内，避免溢出。
+          // group 刚创建、缩放恒为 1，直接设为目标比例即可
+          // （fabric v6 的 scale() 是方法不是数值属性，读取缩放用 scaleX）
           const hintFit = Math.min(
             (cell.width * 0.9) / uploadGroup.getScaledWidth(),
             (cell.height * 0.9) / uploadGroup.getScaledHeight(),
           )
           if (Number.isFinite(hintFit) && hintFit < 1) {
-            uploadGroup.scale(uploadGroup.scale * hintFit)
+            uploadGroup.scale(hintFit)
           }
 
           canvas.add(cell);
