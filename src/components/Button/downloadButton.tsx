@@ -15,6 +15,7 @@ import {
 import { DownloadIcon } from "@/src/components/icons";
 import { useAppSelector } from "@/src/redux/hooks"
 import type { RootStateType } from "@/src/redux/store"
+import type { FabricObjectWithId } from "@/src/types/canvas"
 
 type ExportFormat = "jpeg" | "png"
 
@@ -32,15 +33,23 @@ export default function DownloadButton() {
         if (!canvas) return
         canvas.discardActiveObject()
 
-        // 页面上的画布为适应屏幕做了 CSS 缩放，但画布 backstore 始终保持
-        // size 面板设置的尺寸，这里按设置宽度反推倍率，保证导出宽高
-        // 严格等于 size 设置的宽高，不受显示缩放影响。
+        // 页面上的画布为给选中控件留显示空间，四周加了“工作台”留白
+        // （画板经 viewportTransform 平移到元素中心），backstore 尺寸 =
+        // 画板 + 两侧留白。导出时按留白裁剪：left/top = padding、宽高 =
+        // 画板尺寸、multiplier = 1，输出严格等于 size 面板设置的宽高。
         // toBlob 走 Blob 而不是 base64 dataURL，大图导出时避免几十 MB
         // base64 字符串的内存开销。PNG 编码时 quality 会被忽略。
+        const padding = Math.max((canvas.getWidth() - imageWidth) / 2, 0)
         const blob = await canvas.toBlob({
-            multiplier: imageWidth / canvas.getWidth(),
+            left: padding,
+            top: padding,
+            width: imageWidth,
+            height: imageHeight,
+            multiplier: 1,
             format: format,
             quality: format === "jpeg" ? 0.85 : 1,
+            // 虚线参考框只用于显示画板边界，不进导出
+            filter: (obj) => (obj as FabricObjectWithId).id !== "board_frame",
         })
         if (!blob) return
 

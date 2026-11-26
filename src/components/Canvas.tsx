@@ -12,6 +12,30 @@ import { UploadIcon } from "./icons"
 import { renderToStaticMarkup } from 'react-dom/server';
 import { FabricObjectWithId } from "@/src/types/canvas";
 
+// 选中控件的基础视觉尺寸（屏幕像素）。画布按 displayScale 缩小显示时，
+// 控件尺寸按 1/displayScale 反向补偿，保证屏幕上的视觉大小恒定。
+// fabric 默认样式（浅蓝 rgb(178,204,255) + 1px 细线 + 空心方点）
+// 在被缩小的画布上几乎不可见，需要加强。
+const CONTROL_BASE = {
+  cornerSize: 14, // 控制点直径
+  touchCornerSize: 28, // 触屏命中区直径
+  borderScaleFactor: 1.5, // 选中边框与旋转手柄连接线的宽度
+  mtrRatio: 1.25, // 旋转手柄（mtr）相对普通控制点的放大倍数
+  mtrOffsetY: 40, // 旋转手柄与图片上边缘的屏幕间距（px）
+}
+// displayScale 补偿下限，避免极小屏上控件大得离谱
+const MIN_DISPLAY_SCALE = 0.25
+// 画板四周的留白（“工作台”）：fabric 的选中控件画在 canvas 元素内、
+// 超出元素边界即被裁剪，留白给贴边图片的控件提供显示空间。
+// 屏幕上固定宽度，需容纳旋转手柄（40px 偏移 + 手柄半径 ≈ 49px），取 56px 留余量
+const PADDING_SCREEN = 56
+// 虚线参考框样式：标示画板（导出）边界。不参与交互，导出时用 filter 排除
+const BOARD_FRAME = {
+  color: "#94a3b8",
+  strokeWidth: 1.5,
+  dash: [6, 6],
+}
+
 export default function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -63,9 +87,9 @@ export default function Canvas() {
       // 1.1 Clone canvas
       setCanvasAction(canvas)
 
-      // 1.2 Fit the on-screen canvas inside the visible area (CSS only).
-      // The canvas backstore keeps the full imageWidth x imageHeight, so
-      // exports always follow the size configured in the size panel.
+      // 1.2 Fit the on-screen canvas inside the visible area.
+      // canvas element = 画板 + 四周工作台留白（给选中控件留显示空间），
+      // backstore 保持场景坐标，导出时按留白裁剪（见 downloadButton）。
       const CANVAS_MARGIN = 16
       let displayScale = 1
 
@@ -81,18 +105,113 @@ export default function Canvas() {
             CANVAS_MARGIN,
           320,
         )
-        return Math.min(1, availWidth / imageWidth, availHeight / imageHeight)
+        // 扣除画板两侧的工作台留白（屏幕上固定宽度），可用空间只约束画板本身
+        const availBoardWidth = Math.max(availWidth - PADDING_SCREEN * 2, 100)
+        const availBoardHeight = Math.max(availHeight - PADDING_SCREEN * 2, 240)
+        return Math.min(1, availBoardWidth / imageWidth, availBoardHeight / imageHeight)
       }
+
+      // 补偿单个图片的选中控件尺寸（含旋转手柄 mtr），
+      // 使其在被缩小的画布上保持视觉大小恒定
+      const applyControlsScaleToObject = (obj: fabric.FabricObject) => {
+        const s = 1 / Math.max(displayScale, MIN_DISPLAY_SCALE)
+        obj.set({
+          cornerSize: CONTROL_BASE.cornerSize * s,
+          touchCornerSize: CONTROL_BASE.touchCornerSize * s,
+          borderScaleFactor: CONTROL_BASE.borderScaleFactor * s,
+        })
+        // 旋转手柄比普通控制点略大，更容易被发现
+        const mtr = obj.controls.mtr
+        if (mtr) {
+          mtr.sizeX = CONTROL_BASE.cornerSize * CONTROL_BASE.mtrRatio * s
+          mtr.sizeY = CONTROL_BASE.cornerSize * CONTROL_BASE.mtrRatio * s
+          mtr.touchSizeX = CONTROL_BASE.touchCornerSize * CONTROL_BASE.mtrRatio * s
+          mtr.touchSizeY = CONTROL_BASE.touchCornerSize * CONTROL_BASE.mtrRatio * s
+          // 手柄与图片的间距同样补偿，屏幕上恒定，小窗口时不会压到图片上
+          mtr.offsetY = -CONTROL_BASE.mtrOffsetY * s
+        }
+        obj.setCoords()
+      }
+
+      // 窗口尺寸变化（displayScale 变化）后，对已添加的图片重新补偿
+      const applyControlsScaleToAll = () => {
+        canvas.getObjects().forEach((obj) => {
+          if (obj.type === "image") {
+            applyControlsScaleToObject(obj)
+          }
+        })
+      }
+
+      // 虚线参考框：标示画板（导出）边界。evented: false 不参与交互，
+      // 导出时通过 toBlob 的 filter 排除。
+      // 注意必须置顶：cells 的几何是 -1 起步、+1 外扩（见 canvasConfig），
+      // 不透明 fill 会把底层的参考框边线整个盖住（只露出右侧外半截）
+      let boardFrame: fabric.Rect | null = null
+      const updateBoardFrame = () => {
+        const s = 1 / Math.max(displayScale, MIN_DISPLAY_SCALE)
+        if (!boardFrame) {
+          boardFrame = new fabric.Rect({
+            left: 0,
+            top: 0,
+            width: imageWidth,
+            height: imageHeight,
+            fill: "",
+            stroke: BOARD_FRAME.color,
+            selectable: false,
+            evented: false,
+            excludeFromExport: true,
+            objectCaching: false,
+          });
+          (boardFrame as FabricObjectWithId).set({ id: "board_frame" });
+          canvas.add(boardFrame)
+        }
+        // 线宽与虚线间距按显示比例补偿，屏幕上视觉恒定
+        boardFrame.set({
+          width: imageWidth,
+          height: imageHeight,
+          strokeWidth: BOARD_FRAME.strokeWidth * s,
+          strokeDashArray: BOARD_FRAME.dash.map((d) => d * s),
+        })
+      }
+
+      // 任何对象加入后都把参考框重新置顶：cells / 上传提示 / 图片
+      // 都是参考框创建之后才 add 的，插入顺序天然排到它之上，而 cells
+      // 的不透明 fill 会盖住底层的边线（bringObjectToFront 幂等，不会死循环）
+      canvas.on("object:added", () => {
+        if (boardFrame) {
+          canvas.bringObjectToFront(boardFrame)
+        }
+      })
 
       const applyDisplayScale = () => {
         displayScale = calcDisplayScale()
+        const s = 1 / Math.max(displayScale, MIN_DISPLAY_SCALE)
+        // 取整：让 (canvas.getWidth() - imageWidth) / 2 与 vpt 平移量严格相等，
+        // 导出裁剪零偏差
+        const padding = Math.round(PADDING_SCREEN * s)
+
+        // backstore = 画板 + 四周留白（场景坐标）；CSS 尺寸按显示比例缩放。
+        // 留白区域是“工作台”，让贴边图片的选中控件有地方显示
         canvas.setDimensions(
           {
-            width: Math.round(imageWidth * displayScale),
-            height: Math.round(imageHeight * displayScale),
+            width: Math.round(imageWidth + padding * 2),
+            height: Math.round(imageHeight + padding * 2),
+          },
+          { backstoreOnly: true },
+        )
+        canvas.setDimensions(
+          {
+            width: Math.round((imageWidth + padding * 2) * displayScale),
+            height: Math.round((imageHeight + padding * 2) * displayScale),
           },
           { cssOnly: true },
         )
+        // 把画板平移到元素中心：场景坐标（cells / 图片 / clipPath）完全不变，
+        // 导出时按留白裁剪即可
+        canvas.setViewportTransform([1, 0, 0, 1, padding, padding])
+
+        applyControlsScaleToAll()
+        updateBoardFrame()
       }
       applyDisplayScale()
       window.addEventListener("resize", applyDisplayScale)
@@ -108,10 +227,11 @@ export default function Canvas() {
           const img = await fabric.Image.fromURL(dataUrl);
           const imgId = `img_${new Date().getTime()}`;
 
-          // Remove the upload icon when an image is uploaded
+          // Hide the cell's upload hint while it holds an image. The hint is
+          // hidden (not removed) so it can be restored on delete / clear.
           const existingUploadIcon = canvas.getObjects().find((obj: FabricObjectWithId) => obj.id === `upload_icon_${activeTemplateIndex}_${cellIndex}`);
           if (existingUploadIcon) {
-            canvas.remove(existingUploadIcon);
+            existingUploadIcon.set({ visible: false });
           }
 
           img.set({
@@ -123,6 +243,14 @@ export default function Canvas() {
             clipPath: selectedCell,
             perPixelTargetFind: true,
             imageSmoothing: true,
+            // 选中控件样式：深蓝实色圆点 + 白描边 + 加粗边框，
+            // 替代默认的浅蓝细线空心方点（画布被 CSS 缩小后几乎不可见）。
+            // 尺寸由 applyControlsScaleToObject 按 displayScale 补偿
+            borderColor: "#3b82f6",
+            cornerColor: "#3b82f6",
+            cornerStrokeColor: "#ffffff",
+            cornerStyle: "circle",
+            transparentCorners: false,
           }) as CustomImageObject;
 
           const config = activeTemplate.config[cellIndex]; // 获取对应cell的配置
@@ -131,6 +259,23 @@ export default function Canvas() {
           } else if (config.scaleTo === "height") {
             img.scaleToHeight(selectedCell.height + 1);
           }
+
+          // 记录加载完成后的初始变换（缩放已应用），
+          // 并标记所属格子，供“重置”还原、删除时恢复上传提示用
+          const customImg = img as CustomImageObject;
+          customImg.cellIndex = cellIndex;
+          customImg.initialState = {
+            left: img.left,
+            top: img.top,
+            scaleX: img.scaleX,
+            scaleY: img.scaleY,
+            angle: img.angle,
+            flipX: img.flipX,
+            flipY: img.flipY,
+          };
+
+          // 按当前显示比例补偿选中控件的尺寸
+          applyControlsScaleToObject(customImg);
 
           addImageAction({
             id: imgId,
@@ -157,7 +302,13 @@ export default function Canvas() {
       activeTemplate.config.forEach((config, index) => {
         const PROPERTIES = config.rectFabric(imageHeight, imageWidth, imageBorderWidth)
 
-        const cell = new fabric.Rect(PROPERTIES)
+        // selectable: false — cell 是显示框 + 图片的 clipPath，被拖动会
+        // 导致裁剪区错位、图片显示错乱。evented 保持 true：点击上传、
+        // 悬停高亮、拖放命中等交互不受影响
+        const cell = new fabric.Rect({
+          ...PROPERTIES,
+          selectable: false,
+        })
 
         // Generate SVG data URL for the UploadIcon
         const uploadIconSvg = encodeURIComponent(
@@ -220,6 +371,15 @@ export default function Canvas() {
           )
           if (Number.isFinite(hintFit) && hintFit < 1) {
             uploadGroup.scale(hintFit)
+          }
+
+          // If the cell was filled before this hint finished loading,
+          // add the hint hidden so it never covers the uploaded image.
+          const cellHasImage = canvas
+            .getObjects()
+            .some((obj) => obj.type === "image" && (obj as CustomImageObject).cellIndex === index);
+          if (cellHasImage) {
+            uploadGroup.set({ visible: false });
           }
 
           canvas.add(cell);
@@ -290,7 +450,9 @@ export default function Canvas() {
           let targetCellIndex: number | undefined;
 
           // If a specific object was targeted, check if it's a cell
-          if (targetObject && targetObject.type === 'rect') {
+          // （排除画板边界的虚线参考框，它 type 也是 rect）
+          if (targetObject && targetObject.type === 'rect' &&
+              (targetObject as FabricObjectWithId).id !== "board_frame") {
             targetCell = targetObject as fabric.Rect;
             // Find the index of the targeted cell
             targetCellIndex = activeTemplate.config.findIndex(
@@ -313,7 +475,9 @@ export default function Canvas() {
                 targetCell = canvas.getObjects().find(obj =>
                   obj.left === rectProps.left &&
                   obj.top === rectProps.top &&
-                  obj.type === 'rect'
+                  obj.type === 'rect' &&
+                  // 排除画板边界的虚线参考框（它也在 (0,0)，且同为 rect）
+                  (obj as FabricObjectWithId).id !== "board_frame"
                 ) as fabric.Rect | undefined;
                 targetCellIndex = i;
                 break;
