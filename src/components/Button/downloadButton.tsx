@@ -48,8 +48,12 @@ export default function DownloadButton() {
             multiplier: 1,
             format: format,
             quality: format === "jpeg" ? 0.85 : 1,
-            // 虚线参考框只用于显示画板边界，不进导出
-            filter: (obj) => (obj as FabricObjectWithId).id !== "board_frame",
+            // 虚线参考框、工作台棋盘格只用于显示，不进导出
+            // （画板底色遮罩保留——它就是导出的拼图背景）
+            filter: (obj) => {
+                const id = (obj as FabricObjectWithId).id
+                return id !== "board_frame" && id !== "workbench_checker"
+            },
         })
         if (!blob) return
 

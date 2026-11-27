@@ -35,6 +35,12 @@ const BOARD_FRAME = {
   strokeWidth: 1.5,
   dash: [6, 6],
 }
+// 工作台（留白区）棋盘格样式：类似 PS 等软件里表示透明的灰白格子背景
+const WORKBENCH = {
+  square: 8, // 屏幕上一个格子的边长（px）
+  colorA: "#ffffff",
+  colorB: "#e5e7eb",
+}
 
 export default function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -86,6 +92,25 @@ export default function Canvas() {
 
       // 1.1 Clone canvas
       setCanvasAction(canvas)
+
+      // 1.1.1 工作台棋盘格 pattern：源 tile 固定 2×2 格（16px），
+      // 屏幕上的格子大小由 patternTransform 按 1/displayScale 补偿，
+      // 与控件补偿同一套逻辑（含 MIN_DISPLAY_SCALE 下限）
+      const checkerTile = document.createElement("canvas")
+      checkerTile.width = WORKBENCH.square * 2
+      checkerTile.height = WORKBENCH.square * 2
+      const tileCtx = checkerTile.getContext("2d")
+      if (tileCtx) {
+        tileCtx.fillStyle = WORKBENCH.colorA
+        tileCtx.fillRect(0, 0, WORKBENCH.square * 2, WORKBENCH.square * 2)
+        tileCtx.fillStyle = WORKBENCH.colorB
+        tileCtx.fillRect(0, 0, WORKBENCH.square, WORKBENCH.square)
+        tileCtx.fillRect(WORKBENCH.square, WORKBENCH.square, WORKBENCH.square, WORKBENCH.square)
+      }
+      const checkerPattern = new fabric.Pattern({
+        source: checkerTile,
+        repeat: "repeat",
+      })
 
       // 1.2 Fit the on-screen canvas inside the visible area.
       // canvas element = 画板 + 四周工作台留白（给选中控件留显示空间），
@@ -183,6 +208,59 @@ export default function Canvas() {
         }
       })
 
+      // 工作台背景（棋盘格）+ 画板底色遮罩：
+      // canvas.backgroundColor (#F8F8FF) 填充整个元素（含留白），所以用
+      // 一个覆盖全元素的棋盘格 Rect 表现留白，再用画板大小的 Rect 盖回
+      // 画板底色（cell 间的缝隙不能露出棋盘格）。两者都在最底层、不参与
+      // 交互；导出时棋盘格被裁剪区排除，画板底色保留（与导出背景一致）
+      let workbenchBg: fabric.Rect | null = null
+      let boardBg: fabric.Rect | null = null
+      const updateWorkbench = (padding: number, s: number) => {
+        if (!workbenchBg) {
+          workbenchBg = new fabric.Rect({
+            left: -padding,
+            top: -padding,
+            width: imageWidth + padding * 2,
+            height: imageHeight + padding * 2,
+            fill: checkerPattern,
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+          });
+          (workbenchBg as FabricObjectWithId).set({ id: "workbench_checker" });
+          canvas.add(workbenchBg);
+        } else {
+          workbenchBg.set({
+            left: -padding,
+            top: -padding,
+            width: imageWidth + padding * 2,
+            height: imageHeight + padding * 2,
+          })
+        }
+        // 格子在屏幕上恒定 8px：场景内 tile = 16 × s
+        checkerPattern.patternTransform = [s, 0, 0, s, 0, 0]
+
+        if (!boardBg) {
+          boardBg = new fabric.Rect({
+            left: 0,
+            top: 0,
+            width: imageWidth,
+            height: imageHeight,
+            fill: "#F8F8FF",
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+          });
+          (boardBg as FabricObjectWithId).set({ id: "board_background" });
+          canvas.add(boardBg);
+        } else {
+          boardBg.set({
+            width: imageWidth,
+            height: imageHeight,
+          })
+        }
+      }
+
       const applyDisplayScale = () => {
         displayScale = calcDisplayScale()
         const s = 1 / Math.max(displayScale, MIN_DISPLAY_SCALE)
@@ -211,6 +289,7 @@ export default function Canvas() {
         canvas.setViewportTransform([1, 0, 0, 1, padding, padding])
 
         applyControlsScaleToAll()
+        updateWorkbench(padding, s)
         updateBoardFrame()
       }
       applyDisplayScale()
@@ -476,8 +555,9 @@ export default function Canvas() {
                   obj.left === rectProps.left &&
                   obj.top === rectProps.top &&
                   obj.type === 'rect' &&
-                  // 排除画板边界的虚线参考框（它也在 (0,0)，且同为 rect）
-                  (obj as FabricObjectWithId).id !== "board_frame"
+                  // 排除虚线参考框与画板底色遮罩（都在 (0,0)，且同为 rect）
+                  (obj as FabricObjectWithId).id !== "board_frame" &&
+                  (obj as FabricObjectWithId).id !== "board_background"
                 ) as fabric.Rect | undefined;
                 targetCellIndex = i;
                 break;
